@@ -148,6 +148,44 @@ def test_l1(par):
 
 @pytest.mark.mpi(min_size=2)
 @pytest.mark.parametrize("par", [(par1), (par1j), (par1b)])
+def test_postcomposition(par):
+    """Check postcomposition method for L2 norm"""
+    np.random.seed(10)
+
+    x = pylops_mpi.DistributedArray(
+        global_shape=par["n"],
+        dtype=par["dtype"],
+        partition=par["partition"],
+        engine=backend,
+    )
+    x[:] = np.random.normal(rank, 10, x.local_shape).astype(par["dtype"]) + par[
+        "imag"
+    ] * np.random.normal(rank, 10, x.local_shape).astype(par["dtype"])
+
+    sigma = 2.0
+    l2d = MPIL2()
+    l2dpostc = l2d.postcomposition(sigma=sigma)
+
+    # norm
+    assert l2dpostc(x) == sigma * l2d(x)
+
+    # grad
+    assert_allclose(
+        l2dpostc.grad(x).asarray(),
+        sigma * l2d.grad(x).asarray(),
+        rtol=1e-12,
+    )
+
+    # prox
+    assert_allclose(
+        l2dpostc.prox(x, 1.0).asarray(),
+        l2d.prox(x, sigma).asarray(),
+        rtol=1e-12,
+    )
+
+
+@pytest.mark.mpi(min_size=2)
+@pytest.mark.parametrize("par", [(par1), (par1j), (par1b)])
 def test_precomposition(par):
     """Check precomposition method for L2 norm"""
     np.random.seed(10)

@@ -143,20 +143,43 @@ class MPIProxOperator:
         **kwargs: Any,
     ) -> DistributedArray | StackedDistributedArray:
         """Dual Proximal operator applied to a vector"""
-        y = DistributedArray(
-            global_shape=x.global_shape,
-            base_comm=x.base_comm,
-            base_comm_nccl=x.base_comm_nccl,
-            partition=x.partition,
-            axis=x.axis,
-            local_shapes=x.local_shapes,
-            mask=x.mask,
-            engine=x.engine,
-            dtype=x.dtype,
-        )
-        y[:] = self.proxop.proxdual(x.local_array, tau)
-
+        if isinstance(x, DistributedArray):
+            y = x.empty_like()
+            y[:] = self.proxop.proxdual(x.local_array, tau)
+        else:  # StackedDistributedArray
+            y = x.empty_like()
+            for iarr in range(x.narrays):
+                y[iarr][:] = self.proxop.proxdual(x[iarr].local_array, tau)
         return y
+
+    def postcomposition(self, sigma: float) -> "MPIProxOperator":
+        r"""Postcomposition
+
+        Multiplies a scalar ``sigma`` to the current function.
+
+        This method can also be accessed via the ``*`` operator.
+
+        Parameters
+        ----------
+        sigma : :obj:`float`
+            Scalar
+
+        Notes
+        -----
+        The proximal operator of a function :math:`g= \sigma f(\mathbf{x})` is
+        defined as:
+
+        .. math::
+
+            prox_{\tau g} (\mathbf{x}) =
+            prox_{\sigma \tau f} (\mathbf{x})
+
+        """
+        if isinstance(sigma, float):
+            return _PostcompositionOperator(self, sigma)
+        else:
+            msg = "sigma must be of type float"
+            raise NotImplementedError(msg)
 
     def precomposition(
         self,
@@ -193,6 +216,31 @@ class MPIProxOperator:
         else:
             msg = "a must be of type float and b must be of type float, DistributedArray, or StackedDistributedArray"
             raise NotImplementedError(msg)
+
+
+class _PostcompositionOperator(MPIProxOperator):
+    def __init__(self, f: MPIProxOperator, sigma: float) -> None:
+        if not isinstance(sigma, float):
+            msg = "Second input must be a float"
+            raise ValueError(msg)
+        self.f, self.sigma = f, sigma
+        self.hasgrad = f.hasgrad
+
+    def __call__(
+        self, x: DistributedArray | StackedDistributedArray
+    ) -> bool | float | int:
+        return self.sigma * self.f(x)
+
+    @_check_tau
+    def prox(
+        self, x: DistributedArray | StackedDistributedArray, tau: float, **kwargs: Any
+    ) -> DistributedArray | StackedDistributedArray:
+        return self.f.prox(x, self.sigma * tau)
+
+    def grad(
+        self, x: DistributedArray | StackedDistributedArray
+    ) -> DistributedArray | StackedDistributedArray:
+        return self.sigma * self.f.grad(x)
 
 
 class _PrecompositionOperator(MPIProxOperator):
