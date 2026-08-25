@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 from pylops.utils.backend import to_numpy
 from pylops.utils.typing import NDArray
-
 from pyproximal.optimization.primal import _x0z0_init
 
 from pylops_mpi import DistributedArray, StackedDistributedArray
@@ -53,7 +52,7 @@ def ProximalGradient(
         Proximal operator of f function (must have ``grad`` implemented)
     proxg : :obj:`pylops_mpi.proximal.MPIProxOperator`
         Proximal operator of g function
-    x0 : :obj:`pylops_mpi.DistributedArray` or :obj:`pylops_mpi.StackedDistributedArray`
+    x0 : :obj:`pylops_mpi.DistributedArray`
         Initial vector
     epsg : :obj:`float` or :obj:`numpy.ndarray`, optional
         Scaling factor of g function. Can be a scalar
@@ -83,7 +82,7 @@ def ProximalGradient(
 
     Returns
     -------
-    x : :obj:`pylops_mpi.DistributedArray` or :obj:`pylops_mpi.StackedDistributedArray`
+    x : :obj:`pylops_mpi.DistributedArray`
         Inverted model
 
     Notes
@@ -145,9 +144,7 @@ def ProximalGradient(
         if eta == 1.0:
             x = proxg.prox(y - tau * proxf.grad(y), epsg[iiter] * tau)
         else:
-            x = x + eta * (
-                proxg.prox(x - tau * proxf.grad(x), epsg[iiter] * tau) - x
-            )
+            x = x + eta * (proxg.prox(x - tau * proxf.grad(x), epsg[iiter] * tau) - x)
 
         # update y
         if acceleration == "vandenberghe":
@@ -239,18 +236,18 @@ def ADMML2(
         Proximal operator of g function
     Op : :obj:`pylops_mpi.MPILinearOperator` or :obj:`pylops_mpi.MPIStackedLinearOperator`
         Linear operator of data misfit term
-    b : :obj:`pylops_mpi.DistributedArray` or :obj:`pylops_mpi.StackedDistributedArray`
+    b : :obj:`pylops_mpi.DistributedArray`
         Data
     A : :obj:`pylops_mpi.MPILinearOperator` or :obj:`pylops_mpi.MPIStackedLinearOperator`
         Linear operator of regularization term
-    x0 : :obj:`pylops_mpi.DistributedArray` or :obj:`pylops_mpi.StackedDistributedArray`
+    x0 : :obj:`pylops_mpi.DistributedArray`
         Initial vector
     tau : :obj:`float`
         Positive scalar weight, which should satisfy the following condition
         to guarantees convergence: :math:`\tau \in (0, 1/\lambda_{max}(\mathbf{A}^H\mathbf{A})]`.
     niter : :obj:`int`, optional
         Number of iterations of iterative scheme
-    z0 : :obj:`pylops_mpi.DistributedArray` or :obj:`pylops_mpi.StackedDistributedArray`
+    z0 : :obj:`pylops_mpi.DistributedArray`
         Initial auxiliary vector. If ``None``, initialized to ``A @ x0``.
     gfirst : :obj:`bool`, optional
         Apply Proximal of operator ``g`` first (``True``) or Proximal of
@@ -269,9 +266,9 @@ def ADMML2(
 
     Returns
     -------
-    x : :obj:`pylops_mpi.DistributedArray` or :obj:`pylops_mpi.StackedDistributedArray`
+    x : :obj:`pylops_mpi.DistributedArray`
         Inverted model
-    z : :obj:`pylops_mpi.DistributedArray` or :obj:`pylops_mpi.StackedDistributedArray`
+    z : :obj:`pylops_mpi.DistributedArray`
         Inverted second model
 
     Raises
