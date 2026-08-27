@@ -195,6 +195,7 @@ def PrimalDual(
     if show and rank == 0:
         print("\nTotal time (s) = %.2f" % (time.time() - tstart))
         print("---------------------------------------------------------\n")
+        sys.stdout.flush()
     if not returny:
         return x
     else:
