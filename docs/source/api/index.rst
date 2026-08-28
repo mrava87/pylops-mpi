@@ -164,6 +164,7 @@ Proximal
 
     ProximalGradient
     ADMML2
+    PrimalDual
 
 
 Utils
