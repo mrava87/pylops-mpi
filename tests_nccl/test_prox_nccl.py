@@ -2,8 +2,6 @@
     Designed to run with n GPUs (with 1 MPI process per GPU)
     $ mpiexec -n 10 pytest test_prox_nccl.py --with-mpi
 """
-import os
-
 import cupy as cp
 import numpy as np
 import pytest
