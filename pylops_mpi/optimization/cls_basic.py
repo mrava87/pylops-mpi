@@ -1,8 +1,8 @@
-from typing import List, Optional, Tuple, Union
 import sys
 import time
-import numpy as np
+from typing import List, Optional, Tuple, Union
 
+import numpy as np
 from pylops.optimization.basesolver import Solver
 from pylops.utils import NDArray
 
@@ -46,7 +46,11 @@ class CG(Solver):
     def _print_step(self, x: Union[DistributedArray, StackedDistributedArray]) -> None:
         if isinstance(x, StackedDistributedArray):
             x = x.distarrays[0]
-        strx = f"{x[0]:1.2e}        " if np.iscomplexobj(x.local_array) else f"{x[0]:11.4e}        "
+        strx = (
+            f"{x[0]:1.2e}        "
+            if np.iscomplexobj(x.local_array)
+            else f"{x[0]:11.4e}        "
+        )
         msg = f"{self.iiter:6g}        " + strx + f"{self.cost[self.iiter]:11.4e}"
         print(msg)
         sys.stdout.flush()
@@ -55,12 +59,12 @@ class CG(Solver):
         pass
 
     def setup(
-            self,
-            y: Union[DistributedArray, StackedDistributedArray],
-            x0: Union[DistributedArray, StackedDistributedArray],
-            niter: Optional[int] = None,
-            tol: float = 1e-4,
-            show: bool = False,
+        self,
+        y: Union[DistributedArray, StackedDistributedArray],
+        x0: Union[DistributedArray, StackedDistributedArray],
+        niter: Optional[int] = None,
+        tol: float = 1e-4,
+        show: bool = False,
     ) -> Union[DistributedArray, StackedDistributedArray]:
         r"""Setup solver
 
@@ -92,7 +96,7 @@ class CG(Solver):
         self.r = self.y - self.Op.matvec(x)
         self.rank = x.rank
         self.c = self.r.copy()
-        self.kold = float(np.abs(self.r.dot(self.r.conj())).item())
+        self.kold = float(np.abs(self.r.dot(self.r.conj())))
 
         # create variables to track the residual norm and iterations
         self.cost: List = []
@@ -107,9 +111,9 @@ class CG(Solver):
                 self._print_setup(np.iscomplexobj(x.local_array))
         return x
 
-    def step(self, x: Union[DistributedArray, StackedDistributedArray],
-             show: bool = False
-             ) -> Union[DistributedArray, StackedDistributedArray]:
+    def step(
+        self, x: Union[DistributedArray, StackedDistributedArray], show: bool = False
+    ) -> Union[DistributedArray, StackedDistributedArray]:
         r"""Run one step of solver
 
         Parameters
@@ -127,10 +131,10 @@ class CG(Solver):
         """
         Opc = self.Op.matvec(self.c)
         cOpc = np.abs(self.c.dot(Opc.conj()))
-        a = float((self.kold / cOpc).item())
+        a = float(self.kold / cOpc)
         x += a * self.c
         self.r -= a * Opc
-        k = float(np.abs(self.r.dot(self.r.conj())).item())
+        k = float(np.abs(self.r.dot(self.r.conj())))
         b = float(k / self.kold)
         self.c = self.r + b * self.c
         self.kold = k
@@ -141,11 +145,11 @@ class CG(Solver):
         return x
 
     def run(
-            self,
-            x: Union[DistributedArray, StackedDistributedArray],
-            niter: Optional[int] = None,
-            show: bool = False,
-            itershow: Tuple[int, int, int] = (10, 10, 10),
+        self,
+        x: Union[DistributedArray, StackedDistributedArray],
+        niter: Optional[int] = None,
+        show: bool = False,
+        itershow: Tuple[int, int, int] = (10, 10, 10),
     ) -> Union[DistributedArray, StackedDistributedArray]:
         r"""Run solver
 
@@ -205,13 +209,13 @@ class CG(Solver):
             self._print_finalize(nbar=55)
 
     def solve(
-            self,
-            y: Union[DistributedArray, StackedDistributedArray],
-            x0: Union[DistributedArray, StackedDistributedArray],
-            niter: int = 10,
-            tol: float = 1e-4,
-            show: bool = False,
-            itershow: Tuple[int, int, int] = (10, 10, 10),
+        self,
+        y: Union[DistributedArray, StackedDistributedArray],
+        x0: Union[DistributedArray, StackedDistributedArray],
+        niter: int = 10,
+        tol: float = 1e-4,
+        show: bool = False,
+        itershow: Tuple[int, int, int] = (10, 10, 10),
     ) -> Tuple[Union[DistributedArray, StackedDistributedArray], int, NDArray]:
         r"""Run entire solver
 
@@ -293,7 +297,11 @@ class CGLS(Solver):
     def _print_step(self, x: Union[DistributedArray, StackedDistributedArray]) -> None:
         if isinstance(x, StackedDistributedArray):
             x = x.distarrays[0]
-        strx = f"{x[0]:1.2e}   " if np.iscomplexobj(x.local_array) else f"{x[0]:11.4e}        "
+        strx = (
+            f"{x[0]:1.2e}   "
+            if np.iscomplexobj(x.local_array)
+            else f"{x[0]:11.4e}        "
+        )
         msg = (
             f"{self.iiter:6g}       "
             + strx
@@ -305,14 +313,15 @@ class CGLS(Solver):
     def memory_usage(self) -> None:
         pass
 
-    def setup(self,
-              y: Union[DistributedArray, StackedDistributedArray],
-              x0: Union[DistributedArray, StackedDistributedArray],
-              niter: Optional[int] = None,
-              damp: float = 0.0,
-              tol: float = 1e-4,
-              show: bool = False,
-              ) -> Union[DistributedArray, StackedDistributedArray]:
+    def setup(
+        self,
+        y: Union[DistributedArray, StackedDistributedArray],
+        x0: Union[DistributedArray, StackedDistributedArray],
+        niter: Optional[int] = None,
+        damp: float = 0.0,
+        tol: float = 1e-4,
+        show: bool = False,
+    ) -> Union[DistributedArray, StackedDistributedArray]:
         r"""Setup solver
 
         Parameters
@@ -338,7 +347,7 @@ class CGLS(Solver):
 
         """
         self.y = y
-        self.damp = damp ** 2
+        self.damp = damp**2
         self.tol = tol
         self.niter = niter
 
@@ -349,13 +358,15 @@ class CGLS(Solver):
         self.rank = x.rank
         self.c = r.copy()
         self.q = self.Op.matvec(self.c)
-        self.kold = float(np.abs(r.dot(r.conj())).item())
+        self.kold = float(np.abs(r.dot(r.conj())))
 
         # create variables to track the residual norm and iterations
         self.cost = []
         self.cost1 = []
-        self.cost.append(float(self.s.norm().item()))
-        self.cost1.append(np.sqrt(float(self.cost[0] ** 2 + damp * np.abs(x.dot(x.conj())).item())))
+        self.cost.append(float(self.s.norm()))
+        self.cost1.append(
+            np.sqrt(float(self.cost[0] ** 2 + damp * np.abs(x.dot(x.conj()))))
+        )
         self.iiter = 0
 
         # print setup
@@ -367,9 +378,9 @@ class CGLS(Solver):
                 self._print_setup(np.iscomplexobj(x.local_array))
         return x
 
-    def step(self, x: Union[DistributedArray, StackedDistributedArray],
-             show: bool = False
-             ) -> Union[DistributedArray, StackedDistributedArray]:
+    def step(
+        self, x: Union[DistributedArray, StackedDistributedArray], show: bool = False
+    ) -> Union[DistributedArray, StackedDistributedArray]:
         r"""Run one step of solver
 
         Parameters
@@ -386,28 +397,39 @@ class CGLS(Solver):
 
         """
 
-        a = float(np.abs(self.kold / (self.q.dot(self.q.conj()) + self.damp * self.c.dot(self.c.conj()))).item())
+        a = float(
+            np.abs(
+                self.kold
+                / (self.q.dot(self.q.conj()) + self.damp * self.c.dot(self.c.conj()))
+            )
+        )
         x += a * self.c
         self.s -= a * self.q
         damped_x = self.damp * x
         r = self.Op.rmatvec(self.s) - damped_x
-        k = float(np.abs(r.dot(r.conj())).item())
+        k = float(np.abs(r.dot(r.conj())))
         b = float(k / self.kold)
         self.c = r + b * self.c
         self.q = self.Op.matvec(self.c)
         self.kold = k
         self.iiter += 1
-        self.cost.append(float(self.s.norm().item()))
-        self.cost1.append(np.sqrt(float(self.cost[self.iiter] ** 2 + self.damp * np.abs(x.dot(x.conj())).item())))
+        self.cost.append(float(self.s.norm()))
+        self.cost1.append(
+            np.sqrt(
+                float(self.cost[self.iiter] ** 2 + self.damp * np.abs(x.dot(x.conj())))
+            )
+        )
         if show and self.rank == 0:
             self._print_step(x)
         return x
 
-    def run(self,
-            x: Union[DistributedArray, StackedDistributedArray],
-            niter: Optional[int] = None,
-            show: bool = False,
-            itershow: Tuple[int, int, int] = (10, 10, 10), ) -> Union[DistributedArray, StackedDistributedArray]:
+    def run(
+        self,
+        x: Union[DistributedArray, StackedDistributedArray],
+        niter: Optional[int] = None,
+        show: bool = False,
+        itershow: Tuple[int, int, int] = (10, 10, 10),
+    ) -> Union[DistributedArray, StackedDistributedArray]:
         r"""Run solver
 
         Parameters
@@ -468,15 +490,16 @@ class CGLS(Solver):
             self._print_finalize(nbar=65)
         self.cost = np.array(self.cost)
 
-    def solve(self,
-              y: Union[DistributedArray, StackedDistributedArray],
-              x0: Union[DistributedArray, StackedDistributedArray],
-              niter: int = 10,
-              damp: float = 0.0,
-              tol: float = 1e-4,
-              show: bool = False,
-              itershow: Tuple[int, int, int] = (10, 10, 10),
-              ) -> Tuple[DistributedArray, int, int, float, float, NDArray]:
+    def solve(
+        self,
+        y: Union[DistributedArray, StackedDistributedArray],
+        x0: Union[DistributedArray, StackedDistributedArray],
+        niter: int = 10,
+        damp: float = 0.0,
+        tol: float = 1e-4,
+        show: bool = False,
+        itershow: Tuple[int, int, int] = (10, 10, 10),
+    ) -> Tuple[DistributedArray, int, int, float, float, NDArray]:
         r"""Run entire solver
 
         Parameters

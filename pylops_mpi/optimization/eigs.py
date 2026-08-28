@@ -8,12 +8,12 @@ from pylops_mpi.StackedLinearOperator import MPIStackedLinearOperator
 
 
 def power_iteration(
-        Op: Union[MPILinearOperator, MPIStackedLinearOperator],
-        b_k: Union[DistributedArray, StackedDistributedArray],
-        niter: int = 10,
-        tol: float = 1e-5,
-        dtype: str = "float64",
-        backend: str = "numpy",
+    Op: Union[MPILinearOperator, MPIStackedLinearOperator],
+    b_k: Union[DistributedArray, StackedDistributedArray],
+    niter: int = 10,
+    tol: float = 1e-5,
+    dtype: str = "float64",
+    backend: str = "numpy",
 ) -> Tuple[float, DistributedArray, int]:
     """Power iteration algorithm.
 
@@ -62,15 +62,13 @@ def power_iteration(
     if isinstance(b_k, StackedDistributedArray):
         for iarr in range(b_k.narrays):
             dist = b_k[iarr]
-            b_k[iarr][:] = (
-                ncp.random.rand(dist.local_shape[0]).astype(dtype)
-                + cmpx * ncp.random.rand(dist.local_shape[0]).astype(dtype)
-            )
+            b_k[iarr][:] = ncp.random.rand(dist.local_shape[0]).astype(
+                dtype
+            ) + cmpx * ncp.random.rand(dist.local_shape[0]).astype(dtype)
     else:
-        b_k[:] = (
-            ncp.random.rand(b_k.local_shape[0]).astype(dtype)
-            + cmpx * ncp.random.rand(b_k.local_shape[0]).astype(dtype)
-        )
+        b_k[:] = ncp.random.rand(b_k.local_shape[0]).astype(
+            dtype
+        ) + cmpx * ncp.random.rand(b_k.local_shape[0]).astype(dtype)
     b_k_norm = b_k.norm()
     if isinstance(b_k, StackedDistributedArray):
         for iarr in range(b_k.narrays):
@@ -83,7 +81,7 @@ def power_iteration(
         b1_k = Op.matvec(b_k)
 
         # Compute largest eigenvalue
-        maxeig = b_k.dot(b1_k, vdot=True).item()
+        maxeig = b_k.dot(b1_k, vdot=True)
         b1_k_norm = b1_k.norm()
 
         # Renormalize the vector

@@ -1,25 +1,32 @@
-from typing import Any, Callable, Dict, Optional, Tuple, Union
+import logging
 import sys
 import time
-import logging
 from math import sqrt
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 import numpy as np
-
 from pylops.optimization.basesolver import Solver
-from pylops.optimization.cls_sparsity import _halfthreshold, _hardthreshold, _softthreshold
+from pylops.optimization.cls_sparsity import (
+    _halfthreshold,
+    _hardthreshold,
+    _softthreshold,
+)
 from pylops.utils import get_array_module, get_module_name, get_real_dtype
 from pylops.utils.typing import NDArray
 
 from pylops_mpi.DistributedArray import DistributedArray, StackedDistributedArray
 from pylops_mpi.LinearOperator import MPILinearOperator
-from pylops_mpi.StackedLinearOperator import MPIStackedLinearOperator
 from pylops_mpi.optimization.eigs import power_iteration
+from pylops_mpi.StackedLinearOperator import MPIStackedLinearOperator
 
 logger = logging.getLogger(__name__)
 
 
-def _apply_thresh(x: Union[DistributedArray, StackedDistributedArray], threshf: Callable, thresh: float):
+def _apply_thresh(
+    x: Union[DistributedArray, StackedDistributedArray],
+    threshf: Callable,
+    thresh: float,
+):
     """Apply thresholding
 
     Apply a thresholding function to a distributed array or stacked distributed array.
@@ -114,16 +121,18 @@ class ISTA(Solver):
         sys.stdout.flush()
 
     def _print_step(
-            self,
-            x: Union[DistributedArray, StackedDistributedArray],
-            costdata: float,
-            costreg: float,
-            xupdate: float,
+        self,
+        x: Union[DistributedArray, StackedDistributedArray],
+        costdata: float,
+        costreg: float,
+        xupdate: float,
     ) -> None:
         if isinstance(x, StackedDistributedArray):
             x = x.distarrays[0]
         strx = (
-            f"  {x[0]:1.2e}   " if np.iscomplexobj(x.local_array) else f"     {x[0]:11.4e}        "
+            f"  {x[0]:1.2e}   "
+            if np.iscomplexobj(x.local_array)
+            else f"     {x[0]:11.4e}        "
         )
         msg = (
             f"{self.iiter:6g} "
@@ -134,26 +143,26 @@ class ISTA(Solver):
         sys.stdout.flush()
 
     def memory_usage(
-            self,
-            show: bool = False,
-            unit: str = "B",
+        self,
+        show: bool = False,
+        unit: str = "B",
     ) -> float:
         pass
 
     def setup(
-            self,
-            y: Union[DistributedArray, StackedDistributedArray],
-            x0: Union[DistributedArray, StackedDistributedArray],
-            niter: Optional[int] = None,
-            SOp: Optional[Union[MPILinearOperator, MPIStackedLinearOperator]] = None,
-            eps: float = 0.1,
-            alpha: Optional[float] = None,
-            eigsdict: Optional[Dict[str, Any]] = None,
-            tol: float = 1e-10,
-            threshkind: str = "soft",
-            decay: Optional[NDArray] = None,
-            monitorres: bool = False,
-            show: bool = False,
+        self,
+        y: Union[DistributedArray, StackedDistributedArray],
+        x0: Union[DistributedArray, StackedDistributedArray],
+        niter: Optional[int] = None,
+        SOp: Optional[Union[MPILinearOperator, MPIStackedLinearOperator]] = None,
+        eps: float = 0.1,
+        alpha: Optional[float] = None,
+        eigsdict: Optional[Dict[str, Any]] = None,
+        tol: float = 1e-10,
+        threshkind: str = "soft",
+        decay: Optional[NDArray] = None,
+        monitorres: bool = False,
+        show: bool = False,
     ) -> DistributedArray:
         r"""Setup solver
 
@@ -223,9 +232,7 @@ class ISTA(Solver):
             "soft",
             "half",
         ]:
-            raise ValueError(
-                f"threshkind must be hard, soft, half, got {threshkind}"
-            )
+            raise ValueError(f"threshkind must be hard, soft, half, got {threshkind}")
 
         self.threshf: Callable[[DistributedArray, float], DistributedArray]
         if threshkind == "soft":
@@ -250,7 +257,7 @@ class ISTA(Solver):
                     b_k=x0.empty_like(),
                     dtype=Op1.dtype,
                     backend=get_module_name(self.ncp),
-                    **self.eigsdict
+                    **self.eigsdict,
                 )[0]
             )
             self.alpha = float(1.0 / maxeig)
@@ -271,9 +278,7 @@ class ISTA(Solver):
         return x
 
     def step(
-            self,
-            x: Union[DistributedArray, StackedDistributedArray],
-            show: bool = False
+        self, x: Union[DistributedArray, StackedDistributedArray], show: bool = False
     ) -> (Tuple)[Union[DistributedArray, StackedDistributedArray], float]:
         r"""Run one step of solver
 
@@ -326,7 +331,8 @@ class ISTA(Solver):
             x_unthesh_or_SOpx_unthesh = SOpx_unthesh
 
         x = _apply_thresh(
-            x_unthesh_or_SOpx_unthesh, self.threshf,
+            x_unthesh_or_SOpx_unthesh,
+            self.threshf,
             self.decay[self.iiter] * self.thresh,
         )
 
@@ -335,10 +341,10 @@ class ISTA(Solver):
             x = self.SOpmatvec(x)
 
         # compute model update norm
-        xupdate = (x - xold).norm().item()
+        xupdate = (x - xold).norm()
 
-        costdata = 0.5 * res.norm().item() ** 2
-        costreg = self.eps * x.norm(ord=1).item()
+        costdata = 0.5 * res.norm() ** 2
+        costreg = self.eps * x.norm(ord=1)
         self.cost.append(float(costdata + costreg))
         self.iiter += 1
         if show and self.rank == 0:
@@ -346,11 +352,11 @@ class ISTA(Solver):
         return x, xupdate
 
     def run(
-            self,
-            x: Union[DistributedArray, StackedDistributedArray],
-            niter: Optional[int] = None,
-            show: bool = False,
-            itershow: Tuple[int, int, int] = (10, 10, 10),
+        self,
+        x: Union[DistributedArray, StackedDistributedArray],
+        niter: Optional[int] = None,
+        show: bool = False,
+        itershow: Tuple[int, int, int] = (10, 10, 10),
     ) -> Union[DistributedArray, StackedDistributedArray]:
         r"""Run solver
 
@@ -382,7 +388,8 @@ class ISTA(Solver):
         while self.iiter < niter and xupdate > self.tol:
             showstep = (
                 True
-                if show and (
+                if show
+                and (
                     self.iiter < itershow[0]
                     or niter - self.iiter < itershow[1]
                     or self.iiter % itershow[2] == 0
@@ -411,20 +418,20 @@ class ISTA(Solver):
             self._print_finalize()
 
     def solve(
-            self,
-            y: Union[DistributedArray, StackedDistributedArray],
-            x0: Union[DistributedArray, StackedDistributedArray],
-            niter: Optional[int] = None,
-            SOp: Optional[MPILinearOperator] = None,
-            eps: float = 0.1,
-            alpha: Optional[float] = None,
-            eigsdict: Optional[Dict[str, Any]] = None,
-            tol: float = 1e-10,
-            threshkind: str = "soft",
-            decay: Optional[DistributedArray] = None,
-            monitorres: bool = False,
-            show: bool = False,
-            itershow: Tuple[int, int, int] = (10, 10, 10),
+        self,
+        y: Union[DistributedArray, StackedDistributedArray],
+        x0: Union[DistributedArray, StackedDistributedArray],
+        niter: Optional[int] = None,
+        SOp: Optional[MPILinearOperator] = None,
+        eps: float = 0.1,
+        alpha: Optional[float] = None,
+        eigsdict: Optional[Dict[str, Any]] = None,
+        tol: float = 1e-10,
+        threshkind: str = "soft",
+        decay: Optional[DistributedArray] = None,
+        monitorres: bool = False,
+        show: bool = False,
+        itershow: Tuple[int, int, int] = (10, 10, 10),
     ) -> Tuple[Union[DistributedArray, StackedDistributedArray], int, NDArray]:
         r"""
         Parameters
@@ -582,8 +589,12 @@ class FISTA(ISTA):
         self,
         x: Union[DistributedArray, StackedDistributedArray],
         z: Union[DistributedArray, StackedDistributedArray],
-        show: bool = False
-    ) -> Tuple[Union[DistributedArray, StackedDistributedArray], Union[DistributedArray, StackedDistributedArray], float]:
+        show: bool = False,
+    ) -> Tuple[
+        Union[DistributedArray, StackedDistributedArray],
+        Union[DistributedArray, StackedDistributedArray],
+        float,
+    ]:
         r"""Run one step of solver
 
         Parameters
@@ -636,7 +647,8 @@ class FISTA(ISTA):
         else:
             x_unthesh_or_SOpx_unthesh = SOpx_unthesh
         x = _apply_thresh(
-            x_unthesh_or_SOpx_unthesh, self.threshf,
+            x_unthesh_or_SOpx_unthesh,
+            self.threshf,
             self.decay[self.iiter] * self.thresh,
         )
 
@@ -652,11 +664,11 @@ class FISTA(ISTA):
         z = x + ((told - 1.0) / self.t) * (x - xold)
 
         # check model update
-        xupdate = (x - xold).norm().item()
+        xupdate = (x - xold).norm()
 
         # cost functions
-        costdata = 0.5 * (self.y - self.Op @ x).norm().item() ** 2
-        costreg = self.eps * x.norm(ord=1).item()
+        costdata = 0.5 * (self.y - self.Op @ x).norm() ** 2
+        costreg = self.eps * x.norm(ord=1)
         self.cost.append(float(costdata + costreg))
 
         self.iiter += 1
