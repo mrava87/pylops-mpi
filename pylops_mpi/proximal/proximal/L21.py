@@ -1,7 +1,7 @@
 from typing import Any
 
 import numpy as np
-from pylops.utils.backend import get_module, to_numpy
+from pylops.utils.backend import get_module
 from pyproximal.ProxOperator import _check_tau
 
 from pylops_mpi import DistributedArray, StackedDistributedArray
@@ -76,7 +76,7 @@ class MPIL21(MPIProxOperator):
         distrsum2 = self.sum_squared(x)
         # Compute norm
         f = self.sigma * distrsum2.norm(ord=1)
-        return float(to_numpy(f.item()))
+        return float(f)
 
     @_check_tau
     def prox(self, x: DistributedArray, tau: float, **kwargs: Any) -> DistributedArray:
