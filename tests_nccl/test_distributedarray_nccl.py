@@ -5,10 +5,10 @@ $ mpiexec -n 3 pytest test_distributedarray_nccl.py --with-mpi
 This file employs the same test sets as test_distributedarray under NCCL environment
 """
 
-import numpy as np
 import cupy as cp
-from mpi4py import MPI
+import numpy as np
 import pytest
+from mpi4py import MPI
 from numpy.testing import assert_allclose
 
 from pylops_mpi import DistributedArray, Partition
@@ -19,67 +19,134 @@ np.random.seed(42)
 
 nccl_comm = initialize_nccl_comm()
 
-par1 = {'global_shape': (500, 501),
-        'partition': Partition.SCATTER, 'dtype': np.float64,
-        'axis': 1}
-par1j = {'global_shape': (501, 500),
-         'partition': Partition.SCATTER, 'dtype': np.complex128,
-         'axis': 0}
-par2 = {'global_shape': (500, 501),
-        'partition': Partition.BROADCAST, 'dtype': np.float64,
-        'axis': 1}
-par2j = {'global_shape': (501, 500),
-         'partition': Partition.BROADCAST, 'dtype': np.complex128,
-         'axis': 0}
+par1 = {
+    "global_shape": (500, 501),
+    "partition": Partition.SCATTER,
+    "dtype": np.float64,
+    "axis": 1,
+}
+par1j = {
+    "global_shape": (501, 500),
+    "partition": Partition.SCATTER,
+    "dtype": np.complex128,
+    "axis": 0,
+}
+par2 = {
+    "global_shape": (500, 501),
+    "partition": Partition.BROADCAST,
+    "dtype": np.float64,
+    "axis": 1,
+}
+par2j = {
+    "global_shape": (501, 500),
+    "partition": Partition.BROADCAST,
+    "dtype": np.complex128,
+    "axis": 0,
+}
 
-par3 = {'global_shape': (200, 201, 101),
-        'partition': Partition.SCATTER,
-        'dtype': np.float64, 'axis': 1}
+par3 = {
+    "global_shape": (200, 201, 101),
+    "partition": Partition.SCATTER,
+    "dtype": np.float64,
+    "axis": 1,
+}
 
-par3j = {'global_shape': (200, 201, 101),
-         'partition': Partition.SCATTER,
-         'dtype': np.complex128, 'axis': 2}
+par3j = {
+    "global_shape": (200, 201, 101),
+    "partition": Partition.SCATTER,
+    "dtype": np.complex128,
+    "axis": 2,
+}
 
-par4 = {'x': np.random.normal(100, 100, (500, 501)),
-        'partition': Partition.SCATTER, 'axis': 1, 'norm_axis': 0}
+par4 = {
+    "x": np.random.normal(100, 100, (500, 501)),
+    "partition": Partition.SCATTER,
+    "axis": 1,
+    "norm_axis": 0,
+}
 
-par4j = {'x': np.random.normal(100, 100, (500, 501)) + 1.0j * np.random.normal(50, 50, (500, 501)),
-         'partition': Partition.SCATTER, 'axis': 1, 'norm_axis': 0}
+par4j = {
+    "x": np.random.normal(100, 100, (500, 501))
+    + 1.0j * np.random.normal(50, 50, (500, 501)),
+    "partition": Partition.SCATTER,
+    "axis": 1,
+    "norm_axis": 0,
+}
 
-par5 = {'x': np.random.normal(300, 300, (500, 501)),
-        'partition': Partition.SCATTER, 'axis': 1, 'norm_axis': 1}
+par5 = {
+    "x": np.random.normal(300, 300, (500, 501)),
+    "partition": Partition.SCATTER,
+    "axis": 1,
+    "norm_axis": 1,
+}
 
-par5j = {'x': np.random.normal(300, 300, (500, 501)) + 1.0j * np.random.normal(50, 50, (500, 501)),
-         'partition': Partition.SCATTER, 'axis': 1, 'norm_axis': 0}
+par5j = {
+    "x": np.random.normal(300, 300, (500, 501))
+    + 1.0j * np.random.normal(50, 50, (500, 501)),
+    "partition": Partition.SCATTER,
+    "axis": 1,
+    "norm_axis": 0,
+}
 
-par6 = {'x': np.random.normal(100, 100, (600, 600)),
-        'partition': Partition.SCATTER, 'axis': 0, 'norm_axis': 1}
+par6 = {
+    "x": np.random.normal(100, 100, (600, 600)),
+    "partition": Partition.SCATTER,
+    "axis": 0,
+    "norm_axis": 1,
+}
 
-par6b = {'x': np.random.normal(100, 100, (600, 600)),
-         'partition': Partition.BROADCAST, 'axis': 0, 'norm_axis': 1}
+par6b = {
+    "x": np.random.normal(100, 100, (600, 600)),
+    "partition": Partition.BROADCAST,
+    "axis": 0,
+    "norm_axis": 1,
+}
 
-par7 = {'x': np.random.normal(300, 300, (600, 600)),
-        'partition': Partition.SCATTER, 'axis': 0, 'norm_axis': 0}
+par7 = {
+    "x": np.random.normal(300, 300, (600, 600)),
+    "partition": Partition.SCATTER,
+    "axis": 0,
+    "norm_axis": 0,
+}
 
-par7b = {'x': np.random.normal(300, 300, (600, 600)),
-         'partition': Partition.BROADCAST, 'axis': 0, 'norm_axis': 0}
+par7b = {
+    "x": np.random.normal(300, 300, (600, 600)),
+    "partition": Partition.BROADCAST,
+    "axis": 0,
+    "norm_axis": 0,
+}
 
-par8 = {'x': np.random.normal(100, 100, (1200,)),
-        'partition': Partition.SCATTER, 'axis': 0, 'norm_axis': 0}
+par8 = {
+    "x": np.random.normal(100, 100, (1200,)),
+    "partition": Partition.SCATTER,
+    "axis": 0,
+    "norm_axis": 0,
+}
 
-par8b = {'x': np.random.normal(100, 100, (1200,)),
-         'partition': Partition.BROADCAST, 'axis': 0, 'norm_axis': 0}
+par8b = {
+    "x": np.random.normal(100, 100, (1200,)),
+    "partition": Partition.BROADCAST,
+    "axis": 0,
+    "norm_axis": 0,
+}
 
-par9 = {'x': np.random.normal(300, 300, (1200,)),
-        'partition': Partition.SCATTER, 'axis': 0, 'norm_axis': 0}
+par9 = {
+    "x": np.random.normal(300, 300, (1200,)),
+    "partition": Partition.SCATTER,
+    "axis": 0,
+    "norm_axis": 0,
+}
 
-par9b = {'x': np.random.normal(300, 300, (1200,)),
-         'partition': Partition.BROADCAST, 'axis': 0, 'norm_axis': 0}
+par9b = {
+    "x": np.random.normal(300, 300, (1200,)),
+    "partition": Partition.BROADCAST,
+    "axis": 0,
+    "norm_axis": 0,
+}
 
 
 @pytest.mark.mpi(min_size=2)
-@pytest.mark.parametrize("par", [(par1), (par1j), (par2),
-                                 (par2j), (par3), (par3j)])
+@pytest.mark.parametrize("par", [(par1), (par1j), (par2), (par2j), (par3), (par3j)])
 def test_creation_nccl(par):
     """Test creation of local arrays"""
     distributed_array = DistributedArray(
@@ -162,8 +229,7 @@ def test_to_dist_nccl(par):
 
 
 @pytest.mark.mpi(min_size=2)
-@pytest.mark.parametrize("par", [(par1), (par1j), (par2),
-                                 (par2j), (par3), (par3j)])
+@pytest.mark.parametrize("par", [(par1), (par1j), (par2), (par2j), (par3), (par3j)])
 def test_local_shapes_nccl(par):
     """Test the `local_shapes` parameter in DistributedArray"""
     # Reverse the local_shapes to test the local_shapes parameter
@@ -195,9 +261,11 @@ def test_local_shapes_nccl(par):
         rtol=1e-14,
     )
 
+
 @pytest.mark.mpi(min_size=2)
-@pytest.mark.parametrize("par", [(par4), (par4j), (par5), (par5j),
-                                 (par6), (par6b), (par7), (par7b)])
+@pytest.mark.parametrize(
+    "par", [(par4), (par4j), (par5), (par5j), (par6), (par6b), (par7), (par7b)]
+)
 def test_redistribute(par):
     x_gpu = cp.asarray(par["x"])
     dist_array = DistributedArray.to_dist(
@@ -206,9 +274,11 @@ def test_redistribute(par):
         partition=par["partition"],
         axis=par["axis"],
     )
-    redist_array = dist_array.redistribute(axis=par['axis'] - 1)
+    redist_array = dist_array.redistribute(axis=par["axis"] - 1)
     assert isinstance(redist_array, DistributedArray)
-    assert_allclose(dist_array.asarray().get(), redist_array.asarray().get(), rtol=1e-13)
+    assert_allclose(
+        dist_array.asarray().get(), redist_array.asarray().get(), rtol=1e-13
+    )
 
 
 @pytest.mark.mpi(min_size=2)
@@ -247,29 +317,50 @@ def test_distributed_math_nccl(par1, par2):
 
 
 @pytest.mark.mpi(min_size=2)
-@pytest.mark.parametrize("par1, par2", [(par6, par7), (par6b, par7b),
-                                        (par8, par9), (par8b, par9b)])
+@pytest.mark.parametrize(
+    "par1, par2", [(par6, par7), (par6b, par7b), (par8, par9), (par8b, par9b)]
+)
 def test_distributed_dot_nccl(par1, par2):
     """Test Distributed Dot product"""
     x1_gpu = cp.asarray(par1["x"])
     x2_gpu = cp.asarray(par2["x"])
     arr1 = DistributedArray.to_dist(
-        x=x1_gpu, base_comm_nccl=nccl_comm, partition=par1["partition"], axis=par1["axis"]
+        x=x1_gpu,
+        base_comm_nccl=nccl_comm,
+        partition=par1["partition"],
+        axis=par1["axis"],
     )
     arr2 = DistributedArray.to_dist(
-        x=x2_gpu, base_comm_nccl=nccl_comm, partition=par2["partition"], axis=par2["axis"]
+        x=x2_gpu,
+        base_comm_nccl=nccl_comm,
+        partition=par2["partition"],
+        axis=par2["axis"],
     )
     assert_allclose(
-        (arr1.dot(arr2)).get(),
+        arr1.dot(arr2),
         np.dot(par1["x"].flatten(), par2["x"].flatten()),
         rtol=1e-14,
     )
 
 
 @pytest.mark.mpi(min_size=2)
-@pytest.mark.parametrize("par", [(par4), (par4j), (par5), (par5j),
-                                 (par6), (par6b), (par7), (par7b),
-                                 (par8), (par8b), (par9), (par9b)])
+@pytest.mark.parametrize(
+    "par",
+    [
+        (par4),
+        (par4j),
+        (par5),
+        (par5j),
+        (par6),
+        (par6b),
+        (par7),
+        (par7b),
+        (par8),
+        (par8b),
+        (par9),
+        (par9b),
+    ],
+)
 def test_distributed_norm_nccl(par):
     """Test Distributed numpy.linalg.norm method"""
     x_gpu = cp.asarray(par["x"])
@@ -284,7 +375,7 @@ def test_distributed_norm_nccl(par):
         np.linalg.norm(par["x"], ord=np.inf, axis=par["norm_axis"]),
         rtol=1e-14,
     )
-    assert_allclose(arr.norm().get(), np.linalg.norm(par["x"].flatten()), rtol=1e-13)
+    assert_allclose(arr.norm(), np.linalg.norm(par["x"].flatten()), rtol=1e-13)
 
 
 @pytest.mark.mpi(min_size=2)
@@ -302,15 +393,23 @@ def test_distributed_masked_nccl(par):
     mask = np.repeat(np.arange(nsub), subsize)
 
     # Replicate x as required in masked arrays
-    x_gpu = cp.asarray(par['x'])
-    if par['axis'] != 0:
-        x_gpu = cp.swapaxes(x_gpu, par['axis'], 0)
+    x_gpu = cp.asarray(par["x"])
+    if par["axis"] != 0:
+        x_gpu = cp.swapaxes(x_gpu, par["axis"], 0)
     for isub in range(1, nsub):
-        x_gpu[(x_gpu.shape[0] // nsub) * isub:(x_gpu.shape[0] // nsub) * (isub + 1)] = x_gpu[:x_gpu.shape[0] // nsub]
-    if par['axis'] != 0:
-        x_gpu = np.swapaxes(x_gpu, 0, par['axis'])
+        x_gpu[
+            (x_gpu.shape[0] // nsub) * isub : (x_gpu.shape[0] // nsub) * (isub + 1)
+        ] = x_gpu[: x_gpu.shape[0] // nsub]
+    if par["axis"] != 0:
+        x_gpu = np.swapaxes(x_gpu, 0, par["axis"])
 
-    arr = DistributedArray.to_dist(x=x_gpu, base_comm_nccl=nccl_comm, partition=par['partition'], mask=mask, axis=par['axis'])
+    arr = DistributedArray.to_dist(
+        x=x_gpu,
+        base_comm_nccl=nccl_comm,
+        partition=par["partition"],
+        mask=mask,
+        axis=par["axis"],
+    )
 
     # Global view
     xloc = arr.asarray()
@@ -319,13 +418,14 @@ def test_distributed_masked_nccl(par):
     # Global masked view
     xmaskedloc = arr.asarray(masked=True)
     xmasked_shape = list(x_gpu.shape)
-    xmasked_shape[par['axis']] = int(xmasked_shape[par['axis']] // nsub)
+    xmasked_shape[par["axis"]] = int(xmasked_shape[par["axis"]] // nsub)
     assert xmaskedloc.shape == tuple(xmasked_shape)
 
 
 @pytest.mark.mpi(min_size=2)
-@pytest.mark.parametrize("par1, par2", [(par6, par7), (par6b, par7b),
-                                        (par8, par9), (par8b, par9b)])
+@pytest.mark.parametrize(
+    "par1, par2", [(par6, par7), (par6b, par7b), (par8, par9), (par8b, par9b)]
+)
 def test_distributed_maskeddot_nccl(par1, par2):
     """Test Distributed Dot product with masked array"""
     # number of subcommunicators
@@ -372,13 +472,14 @@ def test_distributed_maskeddot_nccl(par1, par2):
         axis=par2["axis"],
     )
     assert_allclose(
-        arr1.dot(arr2).get(), np.dot(x1.flatten(), x2.flatten()) / nsub, rtol=1e-14
+        arr1.dot(arr2), np.dot(x1.flatten(), x2.flatten()) / nsub, rtol=1e-14
     )
 
 
 @pytest.mark.mpi(min_size=2)
-@pytest.mark.parametrize("par", [(par6), (par6b), (par7), (par7b),
-                                 (par8), (par8b), (par9), (par9b)])
+@pytest.mark.parametrize(
+    "par", [(par6), (par6b), (par7), (par7b), (par8), (par8b), (par9), (par9b)]
+)
 def test_distributed_maskednorm_nccl(par):
     """Test Distributed numpy.linalg.norm method with masked array"""
     # number of subcommunicators
@@ -406,17 +507,19 @@ def test_distributed_maskednorm_nccl(par):
         x=x_gpu, base_comm_nccl=nccl_comm, mask=mask, axis=par["axis"]
     )
     assert_allclose(
-        arr.norm(ord=1, axis=par['norm_axis']).get(),
-        np.linalg.norm(par['x'], ord=1, axis=par['norm_axis']) / (nsub if par['axis'] == par['norm_axis'] else 1),
-        rtol=1e-14
+        arr.norm(ord=1, axis=par["norm_axis"]).get(),
+        np.linalg.norm(par["x"], ord=1, axis=par["norm_axis"])
+        / (nsub if par["axis"] == par["norm_axis"] else 1),
+        rtol=1e-14,
     )
     assert_allclose(
-        arr.norm(ord=2, axis=par['norm_axis']).get(),
-        np.linalg.norm(par['x'], ord=2, axis=par['norm_axis']) / (np.sqrt(nsub) if par['axis'] == par['norm_axis'] else 1),
-        rtol=1e-13
+        arr.norm(ord=2, axis=par["norm_axis"]).get(),
+        np.linalg.norm(par["x"], ord=2, axis=par["norm_axis"])
+        / (np.sqrt(nsub) if par["axis"] == par["norm_axis"] else 1),
+        rtol=1e-13,
     )
     assert_allclose(
-        arr.norm(ord=np.inf, axis=par['norm_axis']).get(),
-        np.linalg.norm(par['x'], ord=np.inf, axis=par['norm_axis']),
-        rtol=1e-14
+        arr.norm(ord=np.inf, axis=par["norm_axis"]).get(),
+        np.linalg.norm(par["x"], ord=np.inf, axis=par["norm_axis"]),
+        rtol=1e-14,
     )
