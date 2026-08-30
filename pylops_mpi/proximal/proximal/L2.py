@@ -2,7 +2,6 @@ from math import sqrt
 from typing import Any, Callable
 
 from pylops.basicoperators import Identity
-from pylops.utils.backend import to_numpy
 from pyproximal.ProxOperator import _check_tau
 
 from pylops_mpi import (
@@ -129,7 +128,7 @@ class MPIL2(MPIProxOperator):
             f = (self.sigma / 2.0) * (x.norm() ** 2)
         if self.q is not None:
             f += self.alpha * self.q.dot(x)
-        return float(to_numpy(f.item()))
+        return float(f)
 
     def _increment_count(func: Callable[..., Any]) -> Callable[..., Any]:
         """Increment counter"""

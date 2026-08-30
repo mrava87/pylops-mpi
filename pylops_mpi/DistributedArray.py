@@ -107,6 +107,30 @@ def subcomm_split(
     return sub_comm
 
 
+def to_scalar(x) -> Union[bool, int, float, complex]:
+    """Convert a size-1 array (or a scalar) into a Python scalar
+
+    Reductions over an entire distributed array (such as dot products and
+    norms) return a size-1 buffer for both the numpy and cupy backends. Such
+    buffers are converted into Python scalars to be consistent with the
+    return type of their numpy counterparts (e.g., :func:`numpy.linalg.norm`)
+    and to avoid deprecated implicit array-to-scalar conversions in the
+    callers. Note that the type of the scalar is preserved (e.g., a complex
+    dot product returns a :obj:`complex`).
+
+    Parameters
+    ----------
+    x : :obj:`numpy.ndarray` or :obj:`cupy.ndarray` or :obj:`float`
+        Size-1 array (or scalar) to convert.
+
+    Returns
+    -------
+    scalar : :obj:`bool` or :obj:`int` or :obj:`float` or :obj:`complex`
+        Converted scalar.
+    """
+    return x.item() if hasattr(x, "item") else x
+
+
 class DistributedArray(DistributedMixIn):
     r"""Distributed Numpy Arrays
 
@@ -776,7 +800,7 @@ class DistributedArray(DistributedMixIn):
 
         Returns
         -------
-        result : float
+        result : :obj:`float` or :obj:`complex`
             The result of the dot product across all ranks. This is reduced across all processes.
         """
         self._check_partition_shape(dist_array)
@@ -801,13 +825,17 @@ class DistributedArray(DistributedMixIn):
             if self.partition in [Partition.BROADCAST, Partition.UNSAFE_BROADCAST]
             else dist_array
         )
-        # Flatten the local arrays and calculate dot product
+        # Flatten the local arrays and calculate dot product. Note that
+        # _allreduce_subcomm returns a size-1 array, which is converted
+        # into a scalar to be consistent with numpy.dot/numpy.vdot
         dot_func = ncp.vdot if vdot else ncp.dot
-        return self._allreduce_subcomm(
-            self.sub_comm,
-            self.base_comm_nccl,
-            dot_func(x.local_array.flatten(), y.local_array.flatten()),
-            engine=self.engine,
+        return to_scalar(
+            self._allreduce_subcomm(
+                self.sub_comm,
+                self.base_comm_nccl,
+                dot_func(x.local_array.flatten(), y.local_array.flatten()),
+                engine=self.engine,
+            )
         )
 
     def _compute_vector_norm(
@@ -948,7 +976,8 @@ class DistributedArray(DistributedMixIn):
         Returns
         -------
         norm : :obj:`float` or :obj:`numpy.ndarray`
-            The computed norm of the distributed array.
+            The computed norm of the distributed array. A scalar is returned
+            when ``axis=None``, an array otherwise.
         """
         # Convert to Partition.SCATTER if Partition.BROADCAST
         x = (
@@ -961,8 +990,12 @@ class DistributedArray(DistributedMixIn):
             else self
         )
         if axis is None:
-            # Flatten the local arrays and calculate norm
-            return x._compute_vector_norm(x.local_array.flatten(), axis=0, ord=ord)
+            # Flatten the local arrays and calculate norm. Note that
+            # _compute_vector_norm returns a size-1 array, which is converted
+            # into a scalar to be consistent with numpy.linalg.norm
+            return to_scalar(
+                x._compute_vector_norm(x.local_array.flatten(), axis=0, ord=ord)
+            )
         if axis >= self.ndim:
             raise ValueError(
                 f"axis={axis} is out of range for array of dimension {self.ndim}"
@@ -1450,7 +1483,7 @@ class StackedDistributedArray:
 
         Returns
         -------
-        result : float
+        result : :obj:`float` or :obj:`complex`
             The result of the dot product across all ranks. This is reduced across all processes.
         """
         self._check_stacked_size(stacked_array)
@@ -1459,31 +1492,38 @@ class StackedDistributedArray:
             dotprod += self[iarr].dot(stacked_array[iarr], vdot=vdot)
         return dotprod
 
-    def norm(self, ord: Optional[int] = None) -> bool | float:
+    def norm(self, ord: Optional[int] = None) -> float:
         """numpy.linalg.norm method on stacked Distributed arrays
 
         Parameters
         ----------
         ord : :obj:`int`, optional
             Order of the norm.
+
+        Returns
+        -------
+        norm : :obj:`float`
+            The computed norm of the stacked distributed array.
         """
-        ncp = get_module(self.engine)
-        norms = ncp.hstack([distarray.norm(ord) for distarray in self.distarrays])
+        # Note that the norms of the individual distributed arrays are
+        # scalars (irrespective of the engine used), thus numpy is used
+        # to combine them
+        norms = np.array([distarray.norm(ord) for distarray in self.distarrays])
         ord = 2 if ord is None else ord
         if ord in ["fro", "nuc"]:
             raise ValueError(f"norm-{ord} not possible for vectors")
         elif ord == 0:
             # Count non-zero then sum reduction
-            norm = ncp.sum(norms)
-        elif ord == ncp.inf:
+            norm = np.sum(norms)
+        elif ord == np.inf:
             # Calculate max followed by max reduction
-            norm = ncp.max(norms)
-        elif ord == -ncp.inf:
+            norm = np.max(norms)
+        elif ord == -np.inf:
             # Calculate min followed by max reduction
-            norm = ncp.min(norms)
+            norm = np.min(norms)
         else:
-            norm = ncp.power(ncp.sum(ncp.power(norms, ord)), 1.0 / ord)
-        return norm
+            norm = np.power(np.sum(np.power(norms, ord)), 1.0 / ord)
+        return to_scalar(norm)
 
     def conj(self) -> Self:
         """Distributed conj() method"""
