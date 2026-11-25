@@ -13,6 +13,7 @@ from pyproximal.proximal import VStack as ProxVStack
 
 import pylops_mpi
 from pylops_mpi.proximal import MPIL2, MPIL21, MPISimplex
+from pylops_mpi.proximal.proximal.VStack import MPIProxStackedVStack
 from pylops_mpi.utils._nccl import initialize_nccl_comm
 
 nccl_comm = initialize_nccl_comm()
@@ -412,6 +413,48 @@ def test_vstack(par, proxop, nstack):
             [pop] * nstack * (size if is_scatter else 1),
             nsg if is_scatter else ns,
         )
+        f_np = pvstack(x_global)
+        prox_np = pvstack.prox(x_global, 0.1)
+        assert_allclose(f, f_np, rtol=1e-14)
+        assert_allclose(prox.get(), prox_np.get(), rtol=1e-14)
+
+
+@pytest.mark.mpi(min_size=2)
+@pytest.mark.parametrize("par", [(par1), (par1j), (par1b)])
+def test_stackedvstack(par):
+    """MPIProxStackedVStack call/prox vs pyproximal applied to each
+    element of the StackedDistributedArray"""
+    cp.random.seed(42)
+
+    proxops = [L1(sigma=2.0), L0(sigma=1.0), L1(sigma=0.5)]
+    xs = []
+    for _ in proxops:
+        x_ = pylops_mpi.DistributedArray(
+            global_shape=par["n"],
+            dtype=par["dtype"],
+            partition=par["partition"],
+            base_comm_nccl=nccl_comm,
+            engine="cupy",
+        )
+        x_[:] = cp.random.normal(rank, 10, x_.local_shape).astype(par["dtype"]) + par[
+            "imag"
+        ] * cp.random.normal(rank, 10, x_.local_shape).astype(par["dtype"])
+        xs.append(x_)
+    x = pylops_mpi.StackedDistributedArray(xs)
+    x_global = cp.concatenate([xi.asarray() for xi in xs])
+    nsg = [xi.global_shape[0] for xi in xs]
+
+    vstackd = MPIProxStackedVStack(
+        [pylops_mpi.proximal.MPIProxOperator(op) for op in proxops]
+    )
+    f = vstackd(x)
+    prox = vstackd.prox(x, 0.1)
+    assert isinstance(prox, pylops_mpi.StackedDistributedArray)
+    assert prox.narrays == len(proxops)
+    prox = cp.concatenate([p.asarray() for p in prox])
+
+    if rank == 0:
+        pvstack = ProxVStack(proxops, nsg)
         f_np = pvstack(x_global)
         prox_np = pvstack.prox(x_global, 0.1)
         assert_allclose(f, f_np, rtol=1e-14)
