@@ -12,7 +12,6 @@ from . import (
 from .plotting.plotting import *
 from .optimization.basic import *
 from .optimization.sparsity import *
-from .proximal.ProxOperator import *
 
 try:
     from .version import version as __version__
