@@ -103,13 +103,15 @@ Templates
 Basic Operators
 ~~~~~~~~~~~~~~~
 
-.. currentmodule:: pylops_mpi.proximal.proximal
+.. currentmodule:: pylops_mpi.proximal
 
 .. autosummary::
    :toctree: generated/
 
     MPIL2
     MPIL21
+    MPISimplex
+    MPIProxStackedVStack
 
 
 Solvers

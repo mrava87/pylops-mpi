@@ -233,7 +233,8 @@ if rank == 0:
 # operator requires an ad-hoc implementation. More specifically, in pylops-mpi
 # we consider only the case where multiple Simplex evaluations are applied over
 # columns of a matrix represented by a
-# :py:class:`pylops_mpi.StackedDistributedArray`.
+# :py:class:`pylops_mpi.StackedDistributedArray` (where each
+# :py:class:`pylops_mpi.DistributedArray` represents a row of the matrix)
 
 ndim, dim = 3, 50
 radius = 1.0
@@ -267,3 +268,55 @@ if rank == 0:
     proxlocal = simplex.prox(arrlocal.ravel(), 0.1)
     print("Simplex: ", f, flocal)
     print("prox_Simplex: ", np.allclose(proxdlocal, proxlocal))
+
+###############################################################################
+# Finally, let's consider the
+# :py:class:`pylops_mpi.proximal.MPIProxStackedVStack` operator.
+# Similar to the previous case, this operator deals with
+# :py:class:`pylops_mpi.StackedDistributedArray`; it receivers a list of
+# distributed proximal operators, which must be equal to the number of
+# :py:class:`pylops_mpi.DistributedArray` in the
+# :py:class:`pylops_mpi.StackedDistributedArray` to is later fed to it, and
+# simply applies each operator to the corresponding
+# :py:class:`pylops_mpi.DistributedArray` (i.e., same index in the list)
+
+ndim, dim = 3, 50
+
+# Stack of DistributedArray
+arr = []
+for i in range(ndim):
+    arr_ = pylops_mpi.DistributedArray(
+        global_shape=dim,
+    )
+    arr_[:] = np.random.normal(rank, 10, arr_.local_shape)
+    arr.append(arr_)
+arr = pylops_mpi.StackedDistributedArray(arr)
+arrlocal = np.hstack([arr_.asarray() for arr_ in arr])
+
+proxops = [
+    pyproximal.proximal.L1(sigma=2.0),
+    pyproximal.proximal.L0(sigma=1.0),
+    pyproximal.proximal.L1(sigma=0.5),
+]
+vstackd = pylops_mpi.proximal.MPIProxStackedVStack(
+    [pylops_mpi.proximal.MPIProxOperator(op) for op in proxops]
+)
+
+# identify the size of each distributed array and create local
+# equivalent of the vstack operator
+nd = [darr.global_shape[0] for darr in arr.distarrays]
+vstack = pyproximal.proximal.VStack(proxops, nd)
+
+# Call
+f = vstackd(arr)
+
+# Proximal
+prox = vstackd.prox(arr, 0.1)
+proxdlocal = prox.asarray()
+
+if rank == 0:
+    print("arrlocal.shape", arrlocal.shape)
+    flocal = vstack(arrlocal)
+    proxlocal = vstack.prox(arrlocal, 0.1)
+    print("VStack: ", f, flocal)
+    print("prox_VStack: ", np.allclose(proxdlocal, proxlocal))
